@@ -19,7 +19,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"github.com/urbint/mock/gomock"
 )
 
 type ErrorReporter struct {

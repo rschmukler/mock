@@ -4,7 +4,7 @@
 package mock_gomock
 
 import (
-	gomock "github.com/golang/mock/gomock"
+	gomock "github.com/urbint/mock/gomock"
 )
 
 // Mock of Matcher interface

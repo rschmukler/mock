@@ -18,8 +18,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	mock_matcher "github.com/golang/mock/gomock/mock_matcher"
+	"github.com/urbint/mock/gomock"
+	mock_matcher "github.com/urbint/mock/gomock/mock_matcher"
 )
 
 func TestMatchers(t *testing.T) {
