@@ -221,15 +221,17 @@ func (c *Call) call(args []interface{}) (rets []interface{}, action func()) {
 
 	// Actions
 	if c.doFunc.IsValid() {
-		doArgs := make([]reflect.Value, len(args))
+		doArgs := make([]reflect.Value, 0, len(args))
 		ft := c.doFunc.Type()
 		for i := 0; i < ft.NumIn(); i++ {
+			var arg reflect.Value
 			if args[i] != nil {
-				doArgs[i] = reflect.ValueOf(args[i])
+				arg = reflect.ValueOf(args[i])
 			} else {
 				// Use the zero value for the arg.
-				doArgs[i] = reflect.Zero(ft.In(i))
+				arg = reflect.Zero(ft.In(i))
 			}
+			doArgs = append(doArgs, arg)
 		}
 		action = func() { c.doFunc.Call(doArgs) }
 	}
