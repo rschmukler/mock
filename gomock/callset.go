@@ -49,15 +49,7 @@ func (cs callSet) Remove(call *Call) {
 
 // FindMatch searches for a matching call. Returns nil if no call matched.
 func (cs callSet) FindMatch(receiver interface{}, method string, args []interface{}) *Call {
-	methodMap, ok := cs[receiver]
-	if !ok {
-		return nil
-	}
-	calls, ok := methodMap[method]
-	if !ok {
-		return nil
-	}
-
+	calls := cs.ForReceiverAndMethod(receiver, method)
 	// Search through the unordered set of calls expected on a method on a
 	// receiver.
 	for _, call := range calls {
@@ -73,4 +65,16 @@ func (cs callSet) FindMatch(receiver interface{}, method string, args []interfac
 	}
 
 	return nil
+}
+
+func (cs callSet) ForReceiverAndMethod(receiver interface{}, method string) []*Call {
+	methodMap, ok := cs[receiver]
+	if !ok {
+		return nil
+	}
+	calls, ok := methodMap[method]
+	if !ok {
+		return nil
+	}
+	return calls
 }

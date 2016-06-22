@@ -55,7 +55,21 @@
 //	- Handle different argument/return types (e.g. ..., chan, map, interface).
 package gomock
 
-import "sync"
+import (
+	"github.com/fatih/color"
+	"github.com/kylelemons/godebug/pretty"
+	"regexp"
+	"strings"
+	"sync"
+)
+
+func init() {
+	color.NoColor = false
+}
+
+var diffPrinter = pretty.Config{
+	SkipZeroFields: true,
+}
 
 // A TestReporter is something that can be used to report test failures.
 // It is satisfied by the standard library's *testing.T.
@@ -71,12 +85,20 @@ type Controller struct {
 	mu            sync.Mutex
 	t             TestReporter
 	expectedCalls callSet
+	missingCalls  []callRecord
+}
+
+type callRecord struct {
+	receiver interface{}
+	method   string
+	args     []interface{}
 }
 
 func NewController(t TestReporter) *Controller {
 	return &Controller{
 		t:             t,
 		expectedCalls: make(callSet),
+		missingCalls:  []callRecord{},
 	}
 }
 
@@ -110,7 +132,8 @@ func (ctrl *Controller) Call(receiver interface{}, method string, args ...interf
 
 	expected := ctrl.expectedCalls.FindMatch(receiver, method, args)
 	if expected == nil {
-		ctrl.t.Fatalf("no matching expected call: %T.%v(%v)", receiver, method, args)
+		ctrl.missingCalls = append(ctrl.missingCalls, callRecord{receiver, method, args})
+		ctrl.t.Fatalf("no matching expected call: %T.%v", receiver, method)
 	}
 
 	// Two things happen here:
@@ -155,7 +178,15 @@ func (ctrl *Controller) Finish() {
 		for _, calls := range methodMap {
 			for _, call := range calls {
 				if !call.satisfied() {
-					ctrl.t.Errorf("missing call(s) to %v", call)
+					ctrl.t.Errorf("missing call(s) to %T.%s", call.receiver, call.method)
+					if expectedArgs := call.expectedArgs(); expectedArgs != nil {
+						for _, missingCall := range ctrl.missingCalls {
+							if call.method == missingCall.method && call.receiver == missingCall.receiver {
+								prettyDiff := diffPrinter.Compare(missingCall.args, expectedArgs)
+								ctrl.t.Errorf("\n%s\n", colorize(prettyDiff))
+							}
+						}
+					}
 					failures = true
 				}
 			}
@@ -164,4 +195,20 @@ func (ctrl *Controller) Finish() {
 	if failures {
 		ctrl.t.Fatalf("aborting test due to missing call(s)")
 	}
+}
+
+func colorize(diff string) string {
+	var (
+		subtract = regexp.MustCompile(`^\s*-`)
+		add      = regexp.MustCompile(`^\s*\+`)
+		lines    = strings.Split(diff, "\n")
+	)
+	for i, line := range lines {
+		if subtract.MatchString(line) {
+			lines[i] = color.RedString(line)
+		} else if add.MatchString(line) {
+			lines[i] = color.GreenString(line)
+		}
+	}
+	return strings.Join(lines, "\n")
 }

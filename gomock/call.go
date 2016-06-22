@@ -41,6 +41,18 @@ type Call struct {
 	setArgs map[int]reflect.Value
 }
 
+func (c *Call) expectedArgs() []interface{} {
+	result := make([]interface{}, len(c.args))
+	for i, matcher := range c.args {
+		if eqMatcher, ok := matcher.(eqMatcher); !ok {
+			return nil
+		} else {
+			result[i] = eqMatcher.x
+		}
+	}
+	return result
+}
+
 // AnyTimes allows the expectation to be called 0 or more times
 func (c *Call) AnyTimes() *Call {
 	c.minCalls, c.maxCalls = 0, 1e8 // close enough to infinity
@@ -179,12 +191,15 @@ func (c *Call) exhausted() bool {
 }
 
 func (c *Call) String() string {
+	return fmt.Sprintf("%T.%v(%s)", c.receiver, c.method, c.ArgsString())
+}
+
+func (c *Call) ArgsString() string {
 	args := make([]string, len(c.args))
 	for i, arg := range c.args {
 		args[i] = arg.String()
 	}
-	arguments := strings.Join(args, ", ")
-	return fmt.Sprintf("%T.%v(%s)", c.receiver, c.method, arguments)
+	return strings.Join(args, ", ")
 }
 
 // Tests if the given call matches the expected call.
